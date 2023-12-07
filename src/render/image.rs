@@ -1,35 +1,42 @@
-#![cfg(feature="image")]
+#![cfg(feature = "image")]
 
-use crate::render::{Canvas, Pixel};
+use crate::render::{Canvas, Pixel as MyPixel};
 use crate::types::Color;
+use image::{ImageBuffer, Rgb, Rgba};
 
-use image::{ImageBuffer, Luma, LumaA, Pixel as ImagePixel, Primitive, Rgb, Rgba};
+// Implement MyPixel for Rgb<u8>
+impl MyPixel for Rgb<u8> {
+    type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
+    type Canvas = (Rgb<u8>, Self::Image);
 
-macro_rules! impl_pixel_for_image_pixel {
-    ($p:ident<$s:ident>: $c:pat => $d:expr) => {
-        impl<$s: Primitive + 'static> Pixel for $p<$s> {
-            type Image = ImageBuffer<Self, Vec<S>>;
-            type Canvas = (Self, Self::Image);
-
-            fn default_color(color: Color) -> Self {
-                match color.select($s::zero(), $s::max_value()) {
-                    $c => $p($d),
-                }
-            }
-        }
-    };
+    fn default_color(color: Color) -> Self {
+        let p = match color.select(0, u8::max_value()) {
+            p => p,
+        };
+        Rgb([p, p, p])
+    }
 }
 
-impl_pixel_for_image_pixel! { Luma<S>: p => [p] }
-impl_pixel_for_image_pixel! { LumaA<S>: p => [p, S::max_value()] }
-impl_pixel_for_image_pixel! { Rgb<S>: p => [p, p, p] }
-impl_pixel_for_image_pixel! { Rgba<S>: p => [p, p, p, S::max_value()] }
+// Implement MyPixel for Rgba<u8>
+impl MyPixel for Rgba<u8> {
+    type Image = ImageBuffer<Rgba<u8>, Vec<u8>>;
+    type Canvas = (Rgba<u8>, Self::Image);
 
-impl<P: ImagePixel + 'static> Canvas for (P, ImageBuffer<P, Vec<P::Subpixel>>) {
-    type Pixel = P;
-    type Image = ImageBuffer<P, Vec<P::Subpixel>>;
+    fn default_color(color: Color) -> Self {
+        let p = match color.select(0, u8::max_value()) {
+            p => p,
+        };
+        Rgba([p, p, p, u8::max_value()])
+    }
+}
 
-    fn new(width: u32, height: u32, dark_pixel: P, light_pixel: P) -> Self {
+// Example implementation of Canvas for Rgb<u8>
+impl Canvas for (Rgb<u8>, ImageBuffer<Rgb<u8>, Vec<u8>>) {
+    type Pixel = Rgb<u8>;
+    type Image = ImageBuffer<Rgb<u8>, Vec<u8>>;
+
+    // Implement the required methods
+    fn new(width: u32, height: u32, dark_pixel: Self::Pixel, light_pixel: Self::Pixel) -> Self {
         (dark_pixel, ImageBuffer::from_pixel(width, height, light_pixel))
     }
 
@@ -37,10 +44,31 @@ impl<P: ImagePixel + 'static> Canvas for (P, ImageBuffer<P, Vec<P::Subpixel>>) {
         self.1.put_pixel(x, y, self.0);
     }
 
-    fn into_image(self) -> ImageBuffer<P, Vec<P::Subpixel>> {
+    fn into_image(self) -> Self::Image {
         self.1
     }
 }
+
+// Example implementation of Canvas for Rgba<u8>
+impl Canvas for (Rgba<u8>, ImageBuffer<Rgba<u8>, Vec<u8>>) {
+    type Pixel = Rgba<u8>;
+    type Image = ImageBuffer<Rgba<u8>, Vec<u8>>;
+
+    // Implement the required methods
+    fn new(width: u32, height: u32, dark_pixel: Self::Pixel, light_pixel: Self::Pixel) -> Self {
+        (dark_pixel, ImageBuffer::from_pixel(width, height, light_pixel))
+    }
+
+    fn draw_dark_pixel(&mut self, x: u32, y: u32) {
+        self.1.put_pixel(x, y, self.0);
+    }
+
+    fn into_image(self) -> Self::Image {
+        self.1
+    }
+}
+
+// Additional specific implementations for Canvas can be added here for other types.
 
 #[cfg(test)]
 mod render_tests {

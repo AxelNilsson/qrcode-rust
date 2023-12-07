@@ -10,7 +10,7 @@
 //! let svg_xml = code.render::<svg::Color>().build();
 //! println!("{}", svg_xml);
 
-#![cfg(feature="svg")]
+#![cfg(feature = "svg")]
 
 use std::fmt::Write;
 use std::marker::PhantomData;
