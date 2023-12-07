@@ -2,7 +2,7 @@
 
 use crate::render::{Canvas, Pixel as MyPixel};
 use crate::types::Color;
-use image::{ImageBuffer, Rgb, Rgba};
+use image::{ImageBuffer, Rgb, Rgba, Luma, LumaA};
 
 // Implement MyPixel for Rgb<u8>
 impl MyPixel for Rgb<u8> {
@@ -68,7 +68,72 @@ impl Canvas for (Rgba<u8>, ImageBuffer<Rgba<u8>, Vec<u8>>) {
     }
 }
 
-// Additional specific implementations for Canvas can be added here for other types.
+// Implement MyPixel for Luma<u8>
+impl MyPixel for Luma<u8> {
+    type Image = ImageBuffer<Luma<u8>, Vec<u8>>;
+    type Canvas = (Luma<u8>, Self::Image);
+
+    fn default_color(color: Color) -> Self {
+        let p = match color.select(0, u8::max_value()) {
+            p => p,
+        };
+        Luma([p])
+    }
+}
+
+// Implement MyPixel for LumaA<u8>
+impl MyPixel for LumaA<u8> {
+    type Image = ImageBuffer<LumaA<u8>, Vec<u8>>;
+    type Canvas = (LumaA<u8>, Self::Image);
+
+    fn default_color(color: Color) -> Self {
+        let p = match color.select(0, u8::max_value()) {
+            p => p,
+        };
+        LumaA([p, u8::max_value()])
+    }
+}
+
+// Implementations for Rgb<u8> and Rgba<u8>
+// ...
+
+// Example implementation of Canvas for Luma<u8>
+impl Canvas for (Luma<u8>, ImageBuffer<Luma<u8>, Vec<u8>>) {
+    type Pixel = Luma<u8>;
+    type Image = ImageBuffer<Luma<u8>, Vec<u8>>;
+
+    // Implement the required methods
+    fn new(width: u32, height: u32, dark_pixel: Self::Pixel, light_pixel: Self::Pixel) -> Self {
+        (dark_pixel, ImageBuffer::from_pixel(width, height, light_pixel))
+    }
+
+    fn draw_dark_pixel(&mut self, x: u32, y: u32) {
+        self.1.put_pixel(x, y, self.0);
+    }
+
+    fn into_image(self) -> Self::Image {
+        self.1
+    }
+}
+
+// Example implementation of Canvas for LumaA<u8>
+impl Canvas for (LumaA<u8>, ImageBuffer<LumaA<u8>, Vec<u8>>) {
+    type Pixel = LumaA<u8>;
+    type Image = ImageBuffer<LumaA<u8>, Vec<u8>>;
+
+    // Implement the required methods
+    fn new(width: u32, height: u32, dark_pixel: Self::Pixel, light_pixel: Self::Pixel) -> Self {
+        (dark_pixel, ImageBuffer::from_pixel(width, height, light_pixel))
+    }
+
+    fn draw_dark_pixel(&mut self, x: u32, y: u32) {
+        self.1.put_pixel(x, y, self.0);
+    }
+
+    fn into_image(self) -> Self::Image {
+        self.1
+    }
+}
 
 #[cfg(test)]
 mod render_tests {
